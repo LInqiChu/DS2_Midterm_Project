@@ -6,7 +6,7 @@ date: "2026-03-24"
 
 
 ```{r}
-load("~/Desktop/STA-HW/P8106/Midterm/datA.RData")
+load("datA.RData")
 datA
 ```
 

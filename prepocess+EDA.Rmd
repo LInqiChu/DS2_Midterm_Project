@@ -1,0 +1,93 @@
+---
+title: "P8106-Midterm"
+output: html_document
+date: "2026-03-24"
+---
+
+
+```{r}
+load("~/Desktop/STA-HW/P8106/Midterm/datA.RData")
+datA
+```
+
+
+## EDA
+```{r}
+# numeric variables
+eda_numeric <- function(data, var, response = "log_PFS") {
+  par(mfrow = c(1, 2))
+  
+  # Histogram
+  hist(data[[var]],
+       main = paste("Histogram of", var),
+       xlab = var,
+       col = "lightblue",
+       border = "white")
+  
+  # Scatter plot
+  plot(data[[var]], data[[response]],
+       xlab = var,
+       ylab = response,
+       main = paste(var, "vs", response),
+       pch = 16, col = "darkblue")
+  
+  # Add linear trend line
+  abline(lm(data[[response]] ~ data[[var]]), col = "red", lwd = 2)
+  
+  # Boxplot
+  boxplot(data[[var]],
+          main = paste("Boxlot of", var),
+          xlab = var,
+          col = 'green4')
+  
+}
+```
+
+```{r}
+# categorical variables
+eda_categorical <- function(data, var, response = "log_PFS") {
+  boxplot(data[[response]] ~ data[[var]],
+          main = paste("Boxplot of", response, "by", var),
+          xlab = var,
+          ylab = response,
+          col = "lightgreen")
+}
+```
+
+```{r}
+numeric_vars <- c("age", "bmi", "tumor_size", "lymph_nodes", "Ki67")
+categorical_vars <- c("menopause", "race", "tumor_grade", "ER", "PR", 
+                      "HER2", "stage", "surgery", "chemo", "hormonal_therapy")
+```
+
+```{r}
+for (v in numeric_vars) {
+  eda_numeric(datA, v)
+}
+```
+
+```{r}
+for (v in categorical_vars) {
+  eda_categorical(datA, v)
+}
+```
+
+
+
+## Model fitting
+```{r}
+# Base linear model
+lm1 <- lm(log_PFS ~ . - id, data = datA)
+summary(lm1)
+```
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+

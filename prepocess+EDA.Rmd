@@ -144,4 +144,71 @@ coef(elastic, s = "lambda.min")
 ```
 
 
+### linear model after lasso&elastic net
+```{r}
+lm_final <- lm(
+  log_PFS ~ age + tumor_size + lymph_nodes +
+    Ki67 + ER + HER2 +
+    tumor_grade + hormonal_therapy,
+  data = datA
+)
+
+summary(lm_final)
+par(mfrow=c(2,2))
+plot(lm_final)
+```
+
+
+### linear model after lasso&elastic net with interaction
+```{r}
+lm_final_interaction <- lm(
+  log_PFS ~ age + tumor_size + lymph_nodes +
+    Ki67 + ER + HER2 +
+    tumor_grade + hormonal_therapy +
+    tumor_size:lymph_nodes,
+  data = datA
+)
+
+summary(lm_final_interaction)
+par(mfrow=c(2,2))
+plot(lm_final_interaction)
+```
+
+
+
+## GAM
+```{r}
+library(mgcv)
+
+gam_1 <- gam(log_PFS ~ 
+                   s(age) +
+                   s(tumor_size) +
+                   s(lymph_nodes) +
+                   s(Ki67) +
+                   tumor_grade +
+                   ER +
+                   HER2 +
+                   hormonal_therapy,
+                 data = datA)
+
+gam_2 <- gam(log_PFS ~ 
+                   s(age) +
+                   s(tumor_size) +
+                   s(lymph_nodes) +
+                   s(Ki67) +
+                   tumor_grade +
+                   ER +
+                   HER2 +
+                   hormonal_therapy +
+                   te(tumor_size,lymph_nodes),
+                 data = datA)
+
+anova(gam_1, gam_2, test = "F")
+```
+
+
+# Plot of GAM
+```{r}
+plot(gam_1)
+```
 

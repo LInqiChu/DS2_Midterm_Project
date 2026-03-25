@@ -1,15 +1,18 @@
 ---
 title: "P8106-Midterm"
-output: html_document
+output: github_document
 date: "2026-03-24"
 ---
-
 
 ```{r}
 load("datA.RData")
 datA
 ```
 
+```{r}
+str(datA)
+summary(datA)
+```
 
 ## EDA
 ```{r}

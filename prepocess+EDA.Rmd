@@ -75,6 +75,22 @@ for (v in categorical_vars) {
 }
 ```
 
+## correlation
+```{r}
+library(tidyverse)
+numeric_data <- datA[, numeric_vars]
+cor_matrix <- cor(numeric_data, use = "complete.obs")
+cor_matrix 
+```
+
+```{r}
+library(corrplot)
+corrplot(cor_matrix, method = "color", type = "upper",
+         addCoef.col = "black",  # show numbers
+         tl.col = "black", tl.srt = 45)
+```
+
+
 
 
 ## Model fitting

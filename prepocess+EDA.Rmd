@@ -3,6 +3,13 @@ title: "P8106-Midterm"
 output: github_document
 date: "2026-03-24"
 ---
+```{r}
+library(ggplot2)
+library(patchwork)
+library(glmnet)
+library(tidyverse)
+library(corrplot)
+```
 
 ```{r}
 load("datA.RData")
@@ -14,35 +21,49 @@ str(datA)
 summary(datA)
 ```
 
-## EDA
 ```{r}
-# numeric variables
+# check missing value
+colSums(is.na(datA))
+```
+
+
+## EDA
+
+```{r}
+# check y distribution
+ggplot(datA, aes(x = log_PFS)) +
+  geom_histogram(bins = 30) +
+  theme_minimal()
+```
+
+```{r}
+# numerical variables
 eda_numeric <- function(data, var, response = "log_PFS") {
-  par(mfrow = c(1, 2))
   
   # Histogram
-  hist(data[[var]],
-       main = paste("Histogram of", var),
-       xlab = var,
-       col = "lightblue",
-       border = "white")
-  
-  # Scatter plot
-  plot(data[[var]], data[[response]],
-       xlab = var,
-       ylab = response,
-       main = paste(var, "vs", response),
-       pch = 16, col = "darkblue")
-  
-  # Add linear trend line
-  abline(lm(data[[response]] ~ data[[var]]), col = "red", lwd = 2)
+  p_hist <- ggplot(data, aes(x = .data[[var]])) +
+    geom_histogram(fill = "lightblue", color = "white", bins = 30) +
+    labs(title = paste("Histogram of", var), x = var, y = "Frequency") +
+    theme_minimal()
   
   # Boxplot
-  boxplot(data[[var]],
-          main = paste("Boxlot of", var),
-          xlab = var,
-          col = 'green4')
+  p_box <- ggplot(data, aes(y = .data[[var]])) +
+    geom_boxplot(fill = "green4") +
+    labs(title = paste("Boxplot of", var), y = var) +
+    theme_minimal() +
+    theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) 
   
+  # Scatter plot
+  p_scatter <- ggplot(data, aes(x = .data[[var]], y = .data[[response]])) +
+    geom_point(alpha = 0.3, color = "darkblue") +
+    geom_smooth(method = "loess", color = "red") +
+    labs(title = paste(var, "vs", response), x = var, y = response) +
+    theme_minimal()
+  
+  combined_plot <- (p_hist | p_box) / p_scatter +
+    plot_annotation(tag_levels = 'A')
+  
+  print(combined_plot)
 }
 ```
 
@@ -77,14 +98,12 @@ for (v in categorical_vars) {
 
 ## correlation
 ```{r}
-library(tidyverse)
 numeric_data <- datA[, numeric_vars]
 cor_matrix <- cor(numeric_data, use = "complete.obs")
 cor_matrix 
 ```
 
 ```{r}
-library(corrplot)
 corrplot(cor_matrix, method = "color", type = "upper",
          addCoef.col = "black",  # show numbers
          tl.col = "black", tl.srt = 45)
@@ -102,11 +121,26 @@ summary(lm1)
 
 
 ```{r}
+# LASSO
+x <- model.matrix(log_PFS ~ . - id, data = datA)[,-1]
+y <- datA$log_PFS
+
+lasso <- cv.glmnet(x, y, alpha = 1)
+
+plot(lasso)
+
+coef(lasso, s = "lambda.min")
+```
 
 
 
+```{r}
+# elastic net
+elastic <- cv.glmnet(x, y, alpha = 0.5)
 
+plot(elastic)
 
+coef(elastic, s = "lambda.min")
 ```
 
 

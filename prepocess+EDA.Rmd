@@ -119,7 +119,6 @@ lm1 <- lm(log_PFS ~ . - id, data = datA)
 summary(lm1)
 ```
 
-
 ```{r}
 # LASSO
 x <- model.matrix(log_PFS ~ . - id, data = datA)[,-1]
@@ -131,8 +130,6 @@ plot(lasso)
 
 coef(lasso, s = "lambda.min")
 ```
-
-
 
 ```{r}
 # elastic net

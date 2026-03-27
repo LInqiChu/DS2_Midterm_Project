@@ -3,28 +3,38 @@ title: "P8106-Midterm"
 output: github_document
 date: "2026-03-24"
 ---
+
 ```{r}
 library(ggplot2)
+library(caret)
 library(patchwork)
 library(glmnet)
 library(tidyverse)
 library(corrplot)
+library(mgcv)
+library(earth)
+library(randomForest)
+library(xgboost)
+library(gam)
+
+set.seed(123)
 ```
 
 ```{r}
+# load data
 load("datA.RData")
 datA
-```
 
-```{r}
 str(datA)
 summary(datA)
 ```
 
 ```{r}
 # check missing value
-colSums(is.na(datA))
+sum(is.na(datA))
 ```
+
+
 
 
 ## EDA
@@ -110,9 +120,25 @@ corrplot(cor_matrix, method = "color", type = "upper",
 ```
 
 
-
+## 从这里开始不一样
 
 ## Model fitting
+
+```{r}
+# feature matrix
+x <- model.matrix(log_PFS ~ . - id, data = datA)[, -1]
+y <- datA$log_PFS
+```
+
+```{r}
+# cross validation setup
+ctrl <- trainControl(
+  method = "repeatedcv",
+  number = 10,
+  repeats = 5
+)
+```
+
 ```{r}
 # Base linear model
 lm1 <- lm(log_PFS ~ . - id, data = datA)
@@ -277,18 +303,223 @@ bwplot(results)
 ```
 
 
-```{r}
 
+#BY CLQ
+
+# linear regression
+```{r}
+lm_fit <- train(
+  x, y,
+  method = "lm",
+  trControl = ctrl,
+  preProcess = c("center", "scale")
+)
+```
+
+# LASSO
+```{r}
+lasso_fit <- train(
+  x, y,
+  method = "glmnet",
+  trControl = ctrl,
+  preProcess = c("center", "scale"),
+  tuneGrid = expand.grid(
+    alpha = 1,
+    lambda = 10^seq(-3, 0, length = 30)
+  )
+)
+
+lasso_fit$results
+```
+
+
+```{r}
+enet_fit <- train(
+  x, y,
+  method = "glmnet",
+  trControl = ctrl,
+  preProcess = c("center", "scale"),
+  tuneGrid = expand.grid(
+    alpha = seq(0, 1, by = 0.1),
+    lambda = 10^seq(-4, 1, length = 50)
+  )
+)
+enet_fit$results
+```
+
+
+```{r}
+gam_fit <- train(
+  x, y,
+  method = "gamSpline",
+  trControl = ctrl,
+  preProcess = c("center", "scale"),
+  tuneLength = 10
+)
+```
+
+```{r}
+mars_fit <- train(
+  x, y,
+  method = "earth",
+  trControl = ctrl,
+  preProcess = c("center", "scale"),
+  tuneGrid = expand.grid(
+    degree = 1:3,
+    nprune = seq(5, 50, by = 5)
+  )
+)
+```
+
+
+```{r}
+rf_fit <- train(
+  x, y,
+  method = "rf",
+  trControl = ctrl,
+  tuneLength = 5
+)
+```
+
+
+```{r}
+results <- resamples(list(
+  Linear = lm_fit,
+  Lasso = lasso_fit,
+  ElasticNet = enet_fit,
+  GAM = gam_fit,
+  MARS = mars_fit,
+  RF = rf_fit
+))
+
+summary(results)
+bwplot(results)
+dotplot(results)
+```
+
+```{r}
+enet_fit$bestTune
+rf_fit$bestTune
+```
+
+# Fit data B
+
+```{r}
+# load data
+load("datB.RData")
+datB
+
+str(datB)
+summary(datB)
+```
+
+```{r}
+# feature matrix
+x <- model.matrix(log_PFS ~ . - id, data = datB)[, -1]
+y <- datA$log_PFS
+```
+
+```{r}
+# cross validation setup
+ctrl <- trainControl(
+  method = "repeatedcv",
+  number = 10,
+  repeats = 5
+)
 ```
 
 
 
+# linear regression
+```{r}
+lm_fit <- train(
+  x, y,
+  method = "lm",
+  trControl = ctrl,
+  preProcess = c("center", "scale")
+)
+```
+
+# LASSO
+```{r}
+lasso_fit <- train(
+  x, y,
+  method = "glmnet",
+  trControl = ctrl,
+  preProcess = c("center", "scale"),
+  tuneGrid = expand.grid(
+    alpha = 1,
+    lambda = 10^seq(-3, 0, length = 30)
+  )
+)
+
+lasso_fit$results
+```
 
 
+```{r}
+enet_fit <- train(
+  x, y,
+  method = "glmnet",
+  trControl = ctrl,
+  preProcess = c("center", "scale"),
+  tuneGrid = expand.grid(
+    alpha = seq(0, 1, by = 0.1),
+    lambda = 10^seq(-4, 1, length = 50)
+  )
+)
+enet_fit$results
+```
 
 
+```{r}
+gam_fit <- train(
+  x, y,
+  method = "gamSpline",
+  trControl = ctrl,
+  preProcess = c("center", "scale"),
+  tuneLength = 10
+)
+```
+
+```{r}
+mars_fit <- train(
+  x, y,
+  method = "earth",
+  trControl = ctrl,
+  preProcess = c("center", "scale"),
+  tuneGrid = expand.grid(
+    degree = 1:3,
+    nprune = seq(5, 50, by = 5)
+  )
+)
+```
 
 
+```{r}
+rf_fit <- train(
+  x, y,
+  method = "rf",
+  trControl = ctrl,
+  tuneLength = 5
+)
+```
+
+
+```{r}
+results <- resamples(list(
+  Linear = lm_fit,
+  Lasso = lasso_fit,
+  ElasticNet = enet_fit,
+  GAM = gam_fit,
+  MARS = mars_fit,
+  RF = rf_fit
+))
+
+summary(results)
+bwplot(results)
+dotplot(results)
+```
 
 
 

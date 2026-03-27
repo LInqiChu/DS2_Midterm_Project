@@ -209,3 +209,86 @@ anova(gam_1, gam_2, test = "F")
 plot(gam_1)
 ```
 
+
+# MARS
+```{r}
+library(earth)
+
+# Fit MARS directly
+mars_model <- earth(
+  log_PFS ~ age + tumor_size + tumor_grade + lymph_nodes + ER + HER2 + Ki67 + hormonal_therapy,
+  data = datA,
+  degree = 2  # optional: allow 2-way interactions
+)
+
+# Summary of selected terms
+summary(mars_model)
+```
+
+```{r}
+# Cross-validation 
+library(caret)
+
+set.seed(123)
+
+ctrl <- trainControl(
+  method = "cv",
+  number = 5
+)
+```
+
+```{r}
+x <- datA[, c("age", "tumor_size", "tumor_grade", "lymph_nodes", "ER", "HER2", "Ki67", "hormonal_therapy")]
+y <- datA$log_PFS
+```
+
+
+```{r}
+lm_fit <- train(x, y, method = "lm", trControl = ctrl)
+lasso_fit <- train(x, y,
+                   method = "glmnet",
+                   tuneGrid = expand.grid(alpha = 1, lambda = seq(0.001, 0.1, length = 20)),
+                   trControl = ctrl)
+enet_fit <- train(x, y,
+                  method = "glmnet",
+                  tuneLength = 10,
+                  trControl = ctrl)
+gam_fit <- train(x, y,
+                 method = "gam",
+                 trControl = ctrl)
+mars_fit <- train(x, y,
+                  method = "earth",
+                  tuneLength = 10,
+                  trControl = ctrl)
+```
+
+
+```{r}
+results <- resamples(list(
+  Linear = lm_fit,
+  Lasso = lasso_fit,
+  ElasticNet = enet_fit,
+  GAM = gam_fit,
+  MARS = mars_fit
+))
+
+summary(results)
+bwplot(results)
+```
+
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+

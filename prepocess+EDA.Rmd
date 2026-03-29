@@ -5,6 +5,12 @@ date: "2026-03-24"
 ---
 
 ```{r}
+if (!dir.exists("figures")) dir.create("figures")
+if (!dir.exists("tables")) dir.create("tables")
+```
+
+
+```{r}
 library(ggplot2)
 library(caret)
 library(patchwork)
@@ -39,14 +45,18 @@ sum(is.na(datA))
 
 ```{r}
 # check y distribution
-ggplot(datA, aes(x = log_PFS)) +
+p <- ggplot(datA, aes(x = log_PFS)) +
   geom_histogram(bins = 30) +
   theme_minimal()
+
+ggsave("figures/logPFS_hist.png", plot = p, width = 6, height = 4, dpi = 300)
 ```
 
 ```{r}
 # numerical variables
-eda_numeric <- function(data, var, response = "log_PFS") {
+# eda_numeric <- function(data, var, response = "log_PFS") {
+eda_numeric <- function(data, var, response = "log_PFS", save_plot = TRUE, out_dir = "figures") {
+
   
   # Histogram
   p_hist <- ggplot(data, aes(x = .data[[var]])) +
@@ -72,17 +82,45 @@ eda_numeric <- function(data, var, response = "log_PFS") {
     plot_annotation(tag_levels = 'A')
   
   print(combined_plot)
+  
+  if (save_plot) {
+    ggsave(
+      filename = file.path(out_dir, paste0("EDA_numeric_", var, ".png")),
+      plot = combined_plot,
+      width = 10,
+      height = 8,
+      dpi = 300
+    )
+  }
 }
 ```
 
 ```{r}
 # categorical variables
-eda_categorical <- function(data, var, response = "log_PFS") {
+eda_categorical <- function(data, var, response = "log_PFS", save_plot = TRUE, out_dir = "figures") {
+# eda_categorical <- function(data, var, response = "log_PFS") {
   boxplot(data[[response]] ~ data[[var]],
           main = paste("Boxplot of", response, "by", var),
           xlab = var,
           ylab = response,
           col = "lightgreen")
+  
+  if (save_plot) {
+    png(
+      filename = file.path(out_dir, paste0("EDA_categorical_", var, ".png")),
+      width = 900,
+      height = 700,
+      res = 120
+    )
+  }
+  
+  boxplot(data[[response]] ~ data[[var]],
+          main = paste("Boxplot of", response, "by", var),
+          xlab = var,
+          ylab = response,
+          col = "lightgreen")
+  
+  if (save_plot) dev.off()
 }
 ```
 
@@ -112,9 +150,26 @@ cor_matrix
 ```
 
 ```{r}
-corrplot(cor_matrix, method = "color", type = "upper",
+# png("figures/correlation_plot.png", width = 800, height = 600, res = 120)
+# 
+# corrplot(cor_matrix, method = "color", type = "upper",
+#          addCoef.col = "black",  # show numbers
+#          tl.col = "black", tl.srt = 45)
+# 
+# dev.off()
+
+
+plot_corr <- function() {
+  corrplot(cor_matrix, method = "color", type = "upper",
          addCoef.col = "black",  # show numbers
          tl.col = "black", tl.srt = 45)
+}
+
+plot_corr()
+
+png("figures/correlation_plot.png", width = 800, height = 600, res = 120)
+plot_corr()
+invisible(dev.off())
 ```
 
 
@@ -195,6 +250,7 @@ lasso3 <- train(
   tuneGrid = expand.grid(alpha = 1, lambda = 10^seq(-3, -1, length = 20)),
   trControl = ctrl
 )
+lasso3$results
 ```
 
 # Elastic net
@@ -256,6 +312,9 @@ poly_fit <- train(
 ```
 
 ```{r}
+library(gridExtra)
+library(grid)
+
 results <- resamples(list(
   Linear = lm_fit,
   Lasso1 = lasso_fit,
@@ -270,6 +329,23 @@ results <- resamples(list(
 summary(results)
 bwplot(results)
 dotplot(results)
+
+sum_res <- summary(results)
+png("tables/resample_RMSE.png", width = 1200, height = 700)
+grid.table(as.data.frame(sum_res$statistics$RMSE))
+png("tables/resample_Rsquared.png", width = 1200, height = 700)
+grid.table(as.data.frame(sum_res$statistics$Rsquared))
+dev.off()
+
+p_bw <- bwplot(results)
+png("figures/bwplot_results.png", width = 1000, height = 700)
+print(p_bw)
+dev.off()
+
+p_dot <- dotplot(results)
+png("figures/dotplot_results.png", width = 1000, height = 700)
+print(p_dot)
+dev.off()
 ```
 
 ```{r}
@@ -284,6 +360,20 @@ model_list <- list(
 )
 
 lapply(model_list, function(x) x$bestTune)
+
+best_tune_df <- bind_rows(
+  lapply(names(model_list), function(nm) {
+    df <- as.data.frame(model_list[[nm]]$bestTune)
+    df$Model <- nm
+    df
+  })
+)
+
+
+best_tune_df <- best_tune_df[, c("Model", setdiff(names(best_tune_df), "Model"))]
+png("tables/best_tune_models.png", width = 1400, height = 700, res = 150)
+grid.table(best_tune_df)
+dev.off()
 ```
 
 
@@ -299,9 +389,22 @@ summary(datB)
 ```
 
 ```{r}
-pred_B <- predict(gam_fit, newdata = datB)
+pred_B <- predict(lasso2, newdata = datB)
 
 postResample(pred = pred_B, obs = datB$log_PFS)
+```
+```{r}
+pred_list <- lapply(model_list, function(m) {
+  predict(m, newdata = datB)
+})
+
+results <- sapply(pred_list, function(pred) {
+  postResample(pred = pred, obs = datB$log_PFS)
+})
+
+results <- t(results)
+
+results[order(results[, "RMSE"]), ]
 ```
 
 
@@ -309,152 +412,152 @@ postResample(pred = pred_B, obs = datB$log_PFS)
 
 ```{r}
 # feature matrix
-x <- model.matrix(log_PFS ~ . - id, data = datB)[, -1]
-y <- datB$log_PFS
+# x <- model.matrix(log_PFS ~ . - id, data = datB)[, -1]
+# y <- datB$log_PFS
 ```
 
 ```{r}
 # cross validation setup
-ctrl <- trainControl(
-  method = "repeatedcv",
-  number = 10,
-  repeats = 5
-)
+# ctrl <- trainControl(
+#   method = "repeatedcv",
+#   number = 10,
+#   repeats = 5
+# )
 ```
 
 # linear regression
 ```{r}
-lm_fit <- train(
-  x, y,
-  method = "lm",
-  trControl = ctrl,
-  preProcess = c("center", "scale")
-)
+# lm_fit <- train(
+#   x, y,
+#   method = "lm",
+#   trControl = ctrl,
+#   preProcess = c("center", "scale")
+# )
 ```
 
 # LASSO
 ```{r}
-lasso_fit <- train(
-  x, y,
-  method = "glmnet",
-  trControl = ctrl,
-  preProcess = c("center", "scale"),
-  tuneGrid = expand.grid(
-    alpha = 1,
-    lambda = 10^seq(-3, 0, length = 30)
-  )
-)
-
-lasso_fit$results
+# lasso_fit <- train(
+#   x, y,
+#   method = "glmnet",
+#   trControl = ctrl,
+#   preProcess = c("center", "scale"),
+#   tuneGrid = expand.grid(
+#     alpha = 1,
+#     lambda = 10^seq(-3, 0, length = 30)
+#   )
+# )
+# 
+# lasso_fit$results
 ```
 
 # LASSO2
 ```{r}
-lasso2 <- train(
-  log_PFS ~ 
-      tumor_size + I(tumor_size^2) +
-      lymph_nodes + I(lymph_nodes^2) +
-      tumor_size:lymph_nodes +
-      age +
-      Ki67 + I(Ki67^2) +
-      tumor_grade +
-      ER + HER2 + hormonal_therapy,
-  data = datB,
-  method = "glmnet",
-  tuneGrid = expand.grid(alpha = 1, lambda = 10^seq(-3, -1, length = 20)),
-  trControl = ctrl
-)
+# lasso2 <- train(
+#   log_PFS ~ 
+#       tumor_size + I(tumor_size^2) +
+#       lymph_nodes + I(lymph_nodes^2) +
+#       tumor_size:lymph_nodes +
+#       age +
+#       Ki67 + I(Ki67^2) +
+#       tumor_grade +
+#       ER + HER2 + hormonal_therapy,
+#   data = datB,
+#   method = "glmnet",
+#   tuneGrid = expand.grid(alpha = 1, lambda = 10^seq(-3, -1, length = 20)),
+#   trControl = ctrl
+# )
 ```
 
 # LASSO3
 ```{r}
-lasso3 <- train(
-  log_PFS ~ 
-      tumor_size +
-      lymph_nodes +
-      tumor_size:lymph_nodes +
-      age +
-      Ki67 +
-      tumor_grade +
-      ER + HER2 + hormonal_therapy,
-  data = datB,
-  method = "glmnet",
-  tuneGrid = expand.grid(alpha = 1, lambda = 10^seq(-3, -1, length = 20)),
-  trControl = ctrl
-)
+# lasso3 <- train(
+#   log_PFS ~ 
+#       tumor_size +
+#       lymph_nodes +
+#       tumor_size:lymph_nodes +
+#       age +
+#       Ki67 +
+#       tumor_grade +
+#       ER + HER2 + hormonal_therapy,
+#   data = datB,
+#   method = "glmnet",
+#   tuneGrid = expand.grid(alpha = 1, lambda = 10^seq(-3, -1, length = 20)),
+#   trControl = ctrl
+# )
 ```
 
 # Elastic net
 ```{r}
-enet_fit <- train(
-  x, y,
-  method = "glmnet",
-  trControl = ctrl,
-  preProcess = c("center", "scale"),
-  tuneGrid = expand.grid(
-    alpha = seq(0, 1, by = 0.1),
-    lambda = 10^seq(-4, 1, length = 50)
-  )
-)
-enet_fit$results
+# enet_fit <- train(
+#   x, y,
+#   method = "glmnet",
+#   trControl = ctrl,
+#   preProcess = c("center", "scale"),
+#   tuneGrid = expand.grid(
+#     alpha = seq(0, 1, by = 0.1),
+#     lambda = 10^seq(-4, 1, length = 50)
+#   )
+# )
+# enet_fit$results
 ```
 
 # GAM
 ```{r}
-gam_fit <- train(
-  x, y,
-  method = "gamSpline",
-  trControl = ctrl,
-  preProcess = c("center", "scale"),
-  tuneLength = 10
-)
+# gam_fit <- train(
+#   x, y,
+#   method = "gamSpline",
+#   trControl = ctrl,
+#   preProcess = c("center", "scale"),
+#   tuneLength = 10
+# )
 ```
 
 # MARS
 ```{r}
-mars_fit <- train(
-  x, y,
-  method = "earth",
-  trControl = ctrl,
-  preProcess = c("center", "scale"),
-  tuneGrid = expand.grid(
-    degree = 1:3,
-    nprune = seq(5, 50, by = 5)
-  )
-)
+# mars_fit <- train(
+#   x, y,
+#   method = "earth",
+#   trControl = ctrl,
+#   preProcess = c("center", "scale"),
+#   tuneGrid = expand.grid(
+#     degree = 1:3,
+#     nprune = seq(5, 50, by = 5)
+#   )
+# )
 ```
 
 # Polynomial regression
 ```{r}
-poly_fit <- train(
-  log_PFS ~ 
-                  tumor_size + I(tumor_size^2) +
-                  log(lymph_nodes + 1) +
-                  tumor_size:lymph_nodes +
-                  age +
-                  log(Ki67 + 1) +
-                  tumor_grade +
-                  ER + HER2 + hormonal_therapy,
-                data = datB,
-  method = "lm",
-  trControl = ctrl
+# poly_fit <- train(
+#   log_PFS ~ 
+#                   tumor_size + I(tumor_size^2) +
+#                   log(lymph_nodes + 1) +
+#                   tumor_size:lymph_nodes +
+#                   age +
+#                   log(Ki67 + 1) +
+#                   tumor_grade +
+#                   ER + HER2 + hormonal_therapy,
+#                 data = datB,
+#   method = "lm",
+#   trControl = ctrl
 )
 ```
 
 
 ```{r}
-results <- resamples(list(
-  Linear = lm_fit,
-  Lasso1 = lasso_fit,
-  Lasso2 = lasso2,
-  Lasso3 = lasso3,
-  ElasticNet = enet_fit,
-  GAM = gam_fit,
-  MARS = mars_fit,
-  poly = poly_fit 
-))
-
-summary(results)
-bwplot(results)
-dotplot(results)
+# results <- resamples(list(
+#   Linear = lm_fit,
+#   Lasso1 = lasso_fit,
+#   Lasso2 = lasso2,
+#   Lasso3 = lasso3,
+#   ElasticNet = enet_fit,
+#   GAM = gam_fit,
+#   MARS = mars_fit,
+#   poly = poly_fit 
+# ))
+# 
+# summary(results)
+# bwplot(results)
+# dotplot(results)
 ```

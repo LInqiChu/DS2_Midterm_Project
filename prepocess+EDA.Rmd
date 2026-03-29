@@ -391,7 +391,7 @@ summary(datB)
 ```
 
 ```{r}
-pred_B <- predict(lasso2, newdata = datB)
+pred_B <- predict(gam_fit, newdata = datB)
 
 postResample(pred = pred_B, obs = datB$log_PFS)
 ```

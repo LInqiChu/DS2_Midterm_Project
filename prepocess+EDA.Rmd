@@ -41,7 +41,7 @@ sum(is.na(datA))
 ```
 
 
-## EDA
+# EDA
 
 ```{r}
 # check y distribution
@@ -54,7 +54,6 @@ ggsave("figures/logPFS_hist.png", plot = p, width = 6, height = 4, dpi = 300)
 
 ```{r}
 # numerical variables
-# eda_numeric <- function(data, var, response = "log_PFS") {
 eda_numeric <- function(data, var, response = "log_PFS", save_plot = TRUE, out_dir = "figures") {
 
   
@@ -98,7 +97,6 @@ eda_numeric <- function(data, var, response = "log_PFS", save_plot = TRUE, out_d
 ```{r}
 # categorical variables
 eda_categorical <- function(data, var, response = "log_PFS", save_plot = TRUE, out_dir = "figures") {
-# eda_categorical <- function(data, var, response = "log_PFS") {
   boxplot(data[[response]] ~ data[[var]],
           main = paste("Boxplot of", response, "by", var),
           xlab = var,
@@ -150,15 +148,6 @@ cor_matrix
 ```
 
 ```{r}
-# png("figures/correlation_plot.png", width = 800, height = 600, res = 120)
-# 
-# corrplot(cor_matrix, method = "color", type = "upper",
-#          addCoef.col = "black",  # show numbers
-#          tl.col = "black", tl.srt = 45)
-# 
-# dev.off()
-
-
 plot_corr <- function() {
   corrplot(cor_matrix, method = "color", type = "upper",
          addCoef.col = "black",  # show numbers
@@ -173,7 +162,7 @@ invisible(dev.off())
 ```
 
 
-## Model fitting
+# Model fitting A
 
 ```{r}
 # feature matrix
@@ -190,7 +179,7 @@ ctrl <- trainControl(
 )
 ```
 
-# linear regression
+## linear regression
 ```{r}
 lm_fit <- train(
   x, y,
@@ -200,7 +189,7 @@ lm_fit <- train(
 )
 ```
 
-# LASSO1
+## LASSO1
 ```{r}
 lasso_fit <- train(
   x, y,
@@ -216,7 +205,7 @@ lasso_fit <- train(
 lasso_fit$results
 ```
 
-# LASSO2
+## LASSO2
 ```{r}
 lasso2 <- train(
   log_PFS ~ 
@@ -234,7 +223,7 @@ lasso2 <- train(
 )
 ```
 
-# LASSO3
+## LASSO3
 ```{r}
 lasso3 <- train(
   log_PFS ~ 
@@ -253,7 +242,7 @@ lasso3 <- train(
 lasso3$results
 ```
 
-# Elastic net
+## Elastic net
 ```{r}
 enet_fit <- train(
   x, y,
@@ -268,7 +257,7 @@ enet_fit <- train(
 enet_fit$results
 ```
 
-# GAM
+## GAM
 ```{r}
 gam_fit <- train(
   x, y,
@@ -279,7 +268,7 @@ gam_fit <- train(
 )
 ```
 
-# MARS
+## MARS
 ```{r}
 mars_fit <- train(
   x, y,
@@ -294,7 +283,7 @@ mars_fit <- train(
 ```
 
 
-# Polynomial regression
+## Polynomial regression
 ```{r}
 poly_fit <- train(
   log_PFS ~ 
@@ -371,7 +360,6 @@ best_tune_df <- bind_rows(
   })
 )
 
-
 best_tune_df <- best_tune_df[, c("Model", setdiff(names(best_tune_df), "Model"))]
 png("tables/best_tune_models.png", width = 1400, height = 700, res = 150)
 grid.table(best_tune_df)
@@ -395,21 +383,6 @@ pred_B <- predict(gam_fit, newdata = datB)
 
 postResample(pred = pred_B, obs = datB$log_PFS)
 ```
-```{r}
-pred_list <- lapply(model_list, function(m) {
-  predict(m, newdata = datB)
-})
-
-results <- sapply(pred_list, function(pred) {
-  postResample(pred = pred, obs = datB$log_PFS)
-})
-
-results <- t(results)
-
-results[order(results[, "RMSE"]), ]
-```
-
-
 
 ```{r}
 #feature matrix
@@ -426,7 +399,7 @@ ctrl <- trainControl(
 )
 ```
 
-# linear regression
+## linear regression
 ```{r}
 lm_fit <- train(
   x, y,
@@ -436,7 +409,7 @@ lm_fit <- train(
 )
 ```
 
-# LASSO
+## LASSO
 ```{r}
 lasso_fit <- train(
   x, y,
@@ -452,7 +425,7 @@ lasso_fit <- train(
 lasso_fit$results
 ```
 
-# LASSO2
+## LASSO2
 ```{r}
 lasso2 <- train(
   log_PFS ~
@@ -470,7 +443,7 @@ lasso2 <- train(
 )
 ```
 
-# LASSO3
+## LASSO3
 ```{r}
 lasso3 <- train(
   log_PFS ~
@@ -488,7 +461,7 @@ lasso3 <- train(
 )
 ```
 
-# Elastic net
+## Elastic net
 ```{r}
 enet_fit <- train(
   x, y,
@@ -503,7 +476,7 @@ enet_fit <- train(
 enet_fit$results
 ```
 
-# GAM
+## GAM
 ```{r}
 gam_fit <- train(
   x, y,
@@ -514,7 +487,7 @@ gam_fit <- train(
 )
 ```
 
-# MARS
+## MARS
 ```{r}
 mars_fit <- train(
   x, y,
@@ -528,7 +501,7 @@ mars_fit <- train(
 )
 ```
 
-# Polynomial regression
+## Polynomial regression
 ```{r}
  poly_fit <- train(
    log_PFS ~

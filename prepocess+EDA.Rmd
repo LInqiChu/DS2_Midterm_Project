@@ -410,156 +410,203 @@ results[order(results[, "RMSE"]), ]
 ```
 
 
-# 下面的不要了
 
 ```{r}
-# feature matrix
-# x <- model.matrix(log_PFS ~ . - id, data = datB)[, -1]
-# y <- datB$log_PFS
+#feature matrix
+x <- model.matrix(log_PFS ~ . - id, data = datB)[, -1]
+y <- datB$log_PFS
 ```
 
 ```{r}
-# cross validation setup
-# ctrl <- trainControl(
-#   method = "repeatedcv",
-#   number = 10,
-#   repeats = 5
-# )
+#cross validation setup
+ctrl <- trainControl(
+  method = "repeatedcv",
+  number = 10,
+  repeats = 5
+)
 ```
 
 # linear regression
 ```{r}
-# lm_fit <- train(
-#   x, y,
-#   method = "lm",
-#   trControl = ctrl,
-#   preProcess = c("center", "scale")
-# )
+lm_fit <- train(
+  x, y,
+  method = "lm",
+  trControl = ctrl,
+  preProcess = c("center", "scale")
+)
 ```
 
 # LASSO
 ```{r}
-# lasso_fit <- train(
-#   x, y,
-#   method = "glmnet",
-#   trControl = ctrl,
-#   preProcess = c("center", "scale"),
-#   tuneGrid = expand.grid(
-#     alpha = 1,
-#     lambda = 10^seq(-3, 0, length = 30)
-#   )
-# )
-# 
-# lasso_fit$results
+lasso_fit <- train(
+  x, y,
+  method = "glmnet",
+  trControl = ctrl,
+  preProcess = c("center", "scale"),
+  tuneGrid = expand.grid(
+    alpha = 1,
+    lambda = 10^seq(-3, 0, length = 30)
+  )
+)
+
+lasso_fit$results
 ```
 
 # LASSO2
 ```{r}
-# lasso2 <- train(
-#   log_PFS ~ 
-#       tumor_size + I(tumor_size^2) +
-#       lymph_nodes + I(lymph_nodes^2) +
-#       tumor_size:lymph_nodes +
-#       age +
-#       Ki67 + I(Ki67^2) +
-#       tumor_grade +
-#       ER + HER2 + hormonal_therapy,
-#   data = datB,
-#   method = "glmnet",
-#   tuneGrid = expand.grid(alpha = 1, lambda = 10^seq(-3, -1, length = 20)),
-#   trControl = ctrl
-# )
+lasso2 <- train(
+  log_PFS ~
+      tumor_size + I(tumor_size^2) +
+      lymph_nodes + I(lymph_nodes^2) +
+      tumor_size:lymph_nodes +
+      age +
+      Ki67 + I(Ki67^2) +
+      tumor_grade +
+      ER + HER2 + hormonal_therapy,
+  data = datB,
+  method = "glmnet",
+  tuneGrid = expand.grid(alpha = 1, lambda = 10^seq(-3, -1, length = 20)),
+  trControl = ctrl
+)
 ```
 
 # LASSO3
 ```{r}
-# lasso3 <- train(
-#   log_PFS ~ 
-#       tumor_size +
-#       lymph_nodes +
-#       tumor_size:lymph_nodes +
-#       age +
-#       Ki67 +
-#       tumor_grade +
-#       ER + HER2 + hormonal_therapy,
-#   data = datB,
-#   method = "glmnet",
-#   tuneGrid = expand.grid(alpha = 1, lambda = 10^seq(-3, -1, length = 20)),
-#   trControl = ctrl
-# )
+lasso3 <- train(
+  log_PFS ~
+      tumor_size +
+      lymph_nodes +
+      tumor_size:lymph_nodes +
+      age +
+      Ki67 +
+      tumor_grade +
+      ER + HER2 + hormonal_therapy,
+  data = datB,
+  method = "glmnet",
+  tuneGrid = expand.grid(alpha = 1, lambda = 10^seq(-3, -1, length = 20)),
+  trControl = ctrl
+)
 ```
 
 # Elastic net
 ```{r}
-# enet_fit <- train(
-#   x, y,
-#   method = "glmnet",
-#   trControl = ctrl,
-#   preProcess = c("center", "scale"),
-#   tuneGrid = expand.grid(
-#     alpha = seq(0, 1, by = 0.1),
-#     lambda = 10^seq(-4, 1, length = 50)
-#   )
-# )
-# enet_fit$results
+enet_fit <- train(
+  x, y,
+  method = "glmnet",
+  trControl = ctrl,
+  preProcess = c("center", "scale"),
+  tuneGrid = expand.grid(
+    alpha = seq(0, 1, by = 0.1),
+    lambda = 10^seq(-4, 1, length = 50)
+  )
+)
+enet_fit$results
 ```
 
 # GAM
 ```{r}
-# gam_fit <- train(
-#   x, y,
-#   method = "gamSpline",
-#   trControl = ctrl,
-#   preProcess = c("center", "scale"),
-#   tuneLength = 10
-# )
+gam_fit <- train(
+  x, y,
+  method = "gamSpline",
+  trControl = ctrl,
+  preProcess = c("center", "scale"),
+  tuneLength = 10
+)
 ```
 
 # MARS
 ```{r}
-# mars_fit <- train(
-#   x, y,
-#   method = "earth",
-#   trControl = ctrl,
-#   preProcess = c("center", "scale"),
-#   tuneGrid = expand.grid(
-#     degree = 1:3,
-#     nprune = seq(5, 50, by = 5)
-#   )
-# )
+mars_fit <- train(
+  x, y,
+  method = "earth",
+  trControl = ctrl,
+  preProcess = c("center", "scale"),
+  tuneGrid = expand.grid(
+    degree = 1:3,
+    nprune = seq(5, 50, by = 5)
+  )
+)
 ```
 
 # Polynomial regression
 ```{r}
-# poly_fit <- train(
-#   log_PFS ~ 
-#                   tumor_size + I(tumor_size^2) +
-#                   log(lymph_nodes + 1) +
-#                   tumor_size:lymph_nodes +
-#                   age +
-#                   log(Ki67 + 1) +
-#                   tumor_grade +
-#                   ER + HER2 + hormonal_therapy,
-#                 data = datB,
-#   method = "lm",
-#   trControl = ctrl
+ poly_fit <- train(
+   log_PFS ~
+                tumor_size + I(tumor_size^2) +
+                   log(lymph_nodes + 1) +
+                   tumor_size:lymph_nodes +
+                   age +
+                   log(Ki67 + 1) +
+                   tumor_grade +
+                   ER + HER2 + hormonal_therapy,
+                 data = datB,
+   method = "lm",
+   trControl = ctrl
 )
 ```
 
 
 ```{r}
-# results <- resamples(list(
-#   Linear = lm_fit,
-#   Lasso1 = lasso_fit,
-#   Lasso2 = lasso2,
-#   Lasso3 = lasso3,
-#   ElasticNet = enet_fit,
-#   GAM = gam_fit,
-#   MARS = mars_fit,
-#   poly = poly_fit 
-# ))
-# 
-# summary(results)
-# bwplot(results)
-# dotplot(results)
+results <- resamples(list(
+  Linear = lm_fit,
+  Lasso1 = lasso_fit,
+  Lasso2 = lasso2,
+  Lasso3 = lasso3,
+  ElasticNet = enet_fit,
+  GAM = gam_fit,
+  MARS = mars_fit,
+  poly = poly_fit
+))
+
+summary(results)
+bwplot(results)
+dotplot(results)
 ```
+
+
+```{r}
+if (!dir.exists("resultB")) dir.create("resultB")
+
+library(gridExtra)
+library(grid)
+
+results <- resamples(list(
+  Linear = lm_fit,
+  Lasso1 = lasso_fit,
+  Lasso2 = lasso2,
+  Lasso3 = lasso3,
+  ElasticNet = enet_fit,
+  GAM = gam_fit,
+  MARS = mars_fit,
+  poly = poly_fit 
+))
+
+summary(results)
+bwplot(results)
+dotplot(results)
+
+sum_res <- summary(results)
+png("resultB/resample_RMSE_B.png", width = 1200, height = 700)
+grid.table(as.data.frame(sum_res$statistics$RMSE))
+dev.off()
+
+png("resultB/resample_Rsquared_B.png", width = 1200, height = 700)
+grid.table(as.data.frame(sum_res$statistics$Rsquared))
+dev.off()
+
+p_bw <- bwplot(results)
+png("resultB/bwplot_results_B.png", width = 1000, height = 700)
+print(p_bw)
+dev.off()
+
+p_dot <- dotplot(results)
+png("resultB/dotplot_results_B.png", width = 1000, height = 700)
+print(p_dot)
+dev.off()
+```
+
+
+
+
+
+

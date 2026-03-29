@@ -278,6 +278,7 @@ model_list <- list(
   Lasso2 = lasso2,
   Lasso3 = lasso3,
   ElasticNet = enet_fit,
+  GAM = gam_fit,
   MARS = mars_fit,
   poly = poly_fit
 )
@@ -296,6 +297,15 @@ datB
 str(datB)
 summary(datB)
 ```
+
+```{r}
+pred_B <- predict(gam_fit, newdata = datB)
+
+postResample(pred = pred_B, obs = datB$log_PFS)
+```
+
+
+# 下面的不要了
 
 ```{r}
 # feature matrix
@@ -448,6 +458,3 @@ summary(results)
 bwplot(results)
 dotplot(results)
 ```
-
-
-

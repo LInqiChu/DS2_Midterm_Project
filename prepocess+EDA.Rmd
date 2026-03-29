@@ -35,8 +35,6 @@ sum(is.na(datA))
 ```
 
 
-
-
 ## EDA
 
 ```{r}
@@ -120,8 +118,6 @@ corrplot(cor_matrix, method = "color", type = "upper",
 ```
 
 
-## 从这里开始不一样
-
 ## Model fitting
 
 ```{r}
@@ -139,173 +135,6 @@ ctrl <- trainControl(
 )
 ```
 
-```{r}
-# Base linear model
-lm1 <- lm(log_PFS ~ . - id, data = datA)
-summary(lm1)
-```
-
-```{r}
-# LASSO
-x <- model.matrix(log_PFS ~ . - id, data = datA)[,-1]
-y <- datA$log_PFS
-
-lasso <- cv.glmnet(x, y, alpha = 1)
-
-plot(lasso)
-
-coef(lasso, s = "lambda.min")
-```
-
-```{r}
-# elastic net
-elastic <- cv.glmnet(x, y, alpha = 0.5)
-
-plot(elastic)
-
-coef(elastic, s = "lambda.min")
-```
-
-
-### linear model after lasso&elastic net
-```{r}
-lm_final <- lm(
-  log_PFS ~ age + tumor_size + lymph_nodes +
-    Ki67 + ER + HER2 +
-    tumor_grade + hormonal_therapy,
-  data = datA
-)
-
-summary(lm_final)
-par(mfrow=c(2,2))
-plot(lm_final)
-```
-
-
-### linear model after lasso&elastic net with interaction
-```{r}
-lm_final_interaction <- lm(
-  log_PFS ~ age + tumor_size + lymph_nodes +
-    Ki67 + ER + HER2 +
-    tumor_grade + hormonal_therapy +
-    tumor_size:lymph_nodes,
-  data = datA
-)
-
-summary(lm_final_interaction)
-par(mfrow=c(2,2))
-plot(lm_final_interaction)
-```
-
-
-
-## GAM
-```{r}
-library(mgcv)
-
-gam_1 <- gam(log_PFS ~ 
-                   s(age) +
-                   s(tumor_size) +
-                   s(lymph_nodes) +
-                   s(Ki67) +
-                   tumor_grade +
-                   ER +
-                   HER2 +
-                   hormonal_therapy,
-                 data = datA)
-
-gam_2 <- gam(log_PFS ~ 
-                   s(age) +
-                   s(tumor_size) +
-                   s(lymph_nodes) +
-                   s(Ki67) +
-                   tumor_grade +
-                   ER +
-                   HER2 +
-                   hormonal_therapy +
-                   te(tumor_size,lymph_nodes),
-                 data = datA)
-
-anova(gam_1, gam_2, test = "F")
-```
-
-
-# Plot of GAM
-```{r}
-plot(gam_1)
-```
-
-
-# MARS
-```{r}
-library(earth)
-
-# Fit MARS directly
-mars_model <- earth(
-  log_PFS ~ age + tumor_size + tumor_grade + lymph_nodes + ER + HER2 + Ki67 + hormonal_therapy,
-  data = datA,
-  degree = 2  # optional: allow 2-way interactions
-)
-
-# Summary of selected terms
-summary(mars_model)
-```
-
-```{r}
-# Cross-validation 
-library(caret)
-
-set.seed(123)
-
-ctrl <- trainControl(
-  method = "cv",
-  number = 5
-)
-```
-
-```{r}
-x <- datA[, c("age", "tumor_size", "tumor_grade", "lymph_nodes", "ER", "HER2", "Ki67", "hormonal_therapy")]
-y <- datA$log_PFS
-```
-
-
-```{r}
-lm_fit <- train(x, y, method = "lm", trControl = ctrl)
-lasso_fit <- train(x, y,
-                   method = "glmnet",
-                   tuneGrid = expand.grid(alpha = 1, lambda = seq(0.001, 0.1, length = 20)),
-                   trControl = ctrl)
-enet_fit <- train(x, y,
-                  method = "glmnet",
-                  tuneLength = 10,
-                  trControl = ctrl)
-gam_fit <- train(x, y,
-                 method = "gam",
-                 trControl = ctrl)
-mars_fit <- train(x, y,
-                  method = "earth",
-                  tuneLength = 10,
-                  trControl = ctrl)
-```
-
-
-```{r}
-results <- resamples(list(
-  Linear = lm_fit,
-  Lasso = lasso_fit,
-  ElasticNet = enet_fit,
-  GAM = gam_fit,
-  MARS = mars_fit
-))
-
-summary(results)
-bwplot(results)
-```
-
-
-
-#BY CLQ
-
 # linear regression
 ```{r}
 lm_fit <- train(
@@ -316,7 +145,7 @@ lm_fit <- train(
 )
 ```
 
-# LASSO
+# LASSO1
 ```{r}
 lasso_fit <- train(
   x, y,
@@ -332,7 +161,43 @@ lasso_fit <- train(
 lasso_fit$results
 ```
 
+# LASSO2
+```{r}
+lasso2 <- train(
+  log_PFS ~ 
+      tumor_size + I(tumor_size^2) +
+      lymph_nodes + I(lymph_nodes^2) +
+      tumor_size:lymph_nodes +
+      age +
+      Ki67 + I(Ki67^2) +
+      tumor_grade +
+      ER + HER2 + hormonal_therapy,
+  data = datA,
+  method = "glmnet",
+  tuneGrid = expand.grid(alpha = 1, lambda = 10^seq(-3, -1, length = 20)),
+  trControl = ctrl
+)
+```
 
+# LASSO3
+```{r}
+lasso3 <- train(
+  log_PFS ~ 
+      tumor_size +
+      lymph_nodes +
+      tumor_size:lymph_nodes +
+      age +
+      Ki67 +
+      tumor_grade +
+      ER + HER2 + hormonal_therapy,
+  data = datA,
+  method = "glmnet",
+  tuneGrid = expand.grid(alpha = 1, lambda = 10^seq(-3, -1, length = 20)),
+  trControl = ctrl
+)
+```
+
+# Elastic net
 ```{r}
 enet_fit <- train(
   x, y,
@@ -347,7 +212,7 @@ enet_fit <- train(
 enet_fit$results
 ```
 
-
+# GAM
 ```{r}
 gam_fit <- train(
   x, y,
@@ -358,6 +223,7 @@ gam_fit <- train(
 )
 ```
 
+# MARS
 ```{r}
 mars_fit <- train(
   x, y,
@@ -372,24 +238,33 @@ mars_fit <- train(
 ```
 
 
+# Polynomial regression
 ```{r}
-rf_fit <- train(
-  x, y,
-  method = "rf",
-  trControl = ctrl,
-  tuneLength = 5
+poly_fit <- train(
+  log_PFS ~ 
+                  tumor_size + I(tumor_size^2) +
+                  log(lymph_nodes + 1) +
+                  tumor_size:lymph_nodes +
+                  age +
+                  log(Ki67 + 1) +
+                  tumor_grade +
+                  ER + HER2 + hormonal_therapy,
+                data = datA,
+  method = "lm",
+  trControl = ctrl
 )
 ```
-
 
 ```{r}
 results <- resamples(list(
   Linear = lm_fit,
-  Lasso = lasso_fit,
+  Lasso1 = lasso_fit,
+  Lasso2 = lasso2,
+  Lasso3 = lasso3,
   ElasticNet = enet_fit,
   GAM = gam_fit,
   MARS = mars_fit,
-  RF = rf_fit
+  poly = poly_fit 
 ))
 
 summary(results)
@@ -398,9 +273,18 @@ dotplot(results)
 ```
 
 ```{r}
-enet_fit$bestTune
-rf_fit$bestTune
+model_list <- list(
+  Lasso1 = lasso_fit,
+  Lasso2 = lasso2,
+  Lasso3 = lasso3,
+  ElasticNet = enet_fit,
+  MARS = mars_fit,
+  poly = poly_fit
+)
+
+lapply(model_list, function(x) x$bestTune)
 ```
+
 
 # Fit data B
 
@@ -416,7 +300,7 @@ summary(datB)
 ```{r}
 # feature matrix
 x <- model.matrix(log_PFS ~ . - id, data = datB)[, -1]
-y <- datA$log_PFS
+y <- datB$log_PFS
 ```
 
 ```{r}
@@ -427,8 +311,6 @@ ctrl <- trainControl(
   repeats = 5
 )
 ```
-
-
 
 # linear regression
 ```{r}
@@ -456,7 +338,43 @@ lasso_fit <- train(
 lasso_fit$results
 ```
 
+# LASSO2
+```{r}
+lasso2 <- train(
+  log_PFS ~ 
+      tumor_size + I(tumor_size^2) +
+      lymph_nodes + I(lymph_nodes^2) +
+      tumor_size:lymph_nodes +
+      age +
+      Ki67 + I(Ki67^2) +
+      tumor_grade +
+      ER + HER2 + hormonal_therapy,
+  data = datB,
+  method = "glmnet",
+  tuneGrid = expand.grid(alpha = 1, lambda = 10^seq(-3, -1, length = 20)),
+  trControl = ctrl
+)
+```
 
+# LASSO3
+```{r}
+lasso3 <- train(
+  log_PFS ~ 
+      tumor_size +
+      lymph_nodes +
+      tumor_size:lymph_nodes +
+      age +
+      Ki67 +
+      tumor_grade +
+      ER + HER2 + hormonal_therapy,
+  data = datB,
+  method = "glmnet",
+  tuneGrid = expand.grid(alpha = 1, lambda = 10^seq(-3, -1, length = 20)),
+  trControl = ctrl
+)
+```
+
+# Elastic net
 ```{r}
 enet_fit <- train(
   x, y,
@@ -471,7 +389,7 @@ enet_fit <- train(
 enet_fit$results
 ```
 
-
+# GAM
 ```{r}
 gam_fit <- train(
   x, y,
@@ -482,6 +400,7 @@ gam_fit <- train(
 )
 ```
 
+# MARS
 ```{r}
 mars_fit <- train(
   x, y,
@@ -495,13 +414,20 @@ mars_fit <- train(
 )
 ```
 
-
+# Polynomial regression
 ```{r}
-rf_fit <- train(
-  x, y,
-  method = "rf",
-  trControl = ctrl,
-  tuneLength = 5
+poly_fit <- train(
+  log_PFS ~ 
+                  tumor_size + I(tumor_size^2) +
+                  log(lymph_nodes + 1) +
+                  tumor_size:lymph_nodes +
+                  age +
+                  log(Ki67 + 1) +
+                  tumor_grade +
+                  ER + HER2 + hormonal_therapy,
+                data = datB,
+  method = "lm",
+  trControl = ctrl
 )
 ```
 
@@ -509,11 +435,13 @@ rf_fit <- train(
 ```{r}
 results <- resamples(list(
   Linear = lm_fit,
-  Lasso = lasso_fit,
+  Lasso1 = lasso_fit,
+  Lasso2 = lasso2,
+  Lasso3 = lasso3,
   ElasticNet = enet_fit,
   GAM = gam_fit,
   MARS = mars_fit,
-  RF = rf_fit
+  poly = poly_fit 
 ))
 
 summary(results)

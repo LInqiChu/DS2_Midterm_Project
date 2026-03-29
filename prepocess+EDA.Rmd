@@ -333,6 +333,8 @@ dotplot(results)
 sum_res <- summary(results)
 png("tables/resample_RMSE.png", width = 1200, height = 700)
 grid.table(as.data.frame(sum_res$statistics$RMSE))
+dev.off()
+
 png("tables/resample_Rsquared.png", width = 1200, height = 700)
 grid.table(as.data.frame(sum_res$statistics$Rsquared))
 dev.off()
